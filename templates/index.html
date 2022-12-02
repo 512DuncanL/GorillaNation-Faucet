@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Gorilla Nation</title>
+    <meta name="description" content="Welcome to Gorilla Nation, the top banano faucet! Get your daily dose of $BAN right here, right now!">
+    <meta name="keywords" content="$BAN, banano, potassium, Gorilla Nation, faucet, cryptocurrency, banano faucet, crypto faucet, crypto, banano coin">
+    <meta name="author" content="5dl#6651">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, target-densityDpi=device-dpi"
+	/>
+	<link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+
+<body>
+	<main class="content">
+		<h1>Gorilla Nation</h1>
+        <p class="description">Welcome to Gorilla Nation, the top banano faucet! Get your daily dose of $BAN right here, right now!</p>
+		<section class="alertContainer">
+			{% for message in get_flashed_messages() %} {% if "Success" in message or "tripled" in message %}
+			<p class="success alert">{{ message }}</p>
+            <br>
+			{% else %}
+			<p class="error alert">{{ message }}</p>
+            <br>
+			{% endif %} {% endfor %}
+		</section>
+		<form method="post">
+			<input type="text" name="address" placeholder="Your $BAN Address">
+            {{ xcaptcha }}
+            <input type="text" name="ab" style="display:none" id="ab" value="False">
+            <button type="submit" onclick="submit();">Claim some $BAN</button>
+        </form>
+        <section class="amountContainer">
+            <p><span>Balance: {{ messages["balance"] }}</span><img src="{{ url_for('static', filename='ban.svg') }}"></p>
+            <p><span>Reward: {{ messages["reward"] }}<b> × 3</b></span><img src="{{ url_for('static', filename='ban.svg') }}"></p>
+            <p class="hint">Thanks for disabling your adblock, your reward will be tripled</p>
+        </section>
+        <p class="donations"><a href="https://creeper.banano.cc/explorer/account/ban_1gori11a7fz3tee6aydqxcehttzbuk93pjsctanfkgqmesa3dmo1cyw89xex/history">Donate</a></p>
+        <iframe class="bottomad" data-aa="1891561" src="//ad.a-ads.com/1891561?size=320x100&background_color=444d56&text_color=cdd2d7&title_color=a2cfff&title_hover_color=449fff&link_color=a2cfff&link_hover_color=449fff" style="width:320px; height:100px; border:0px; padding:0; overflow:hidden; background-color: transparent;"></iframe>
+    </main>
+    <iframe class="leftad" data-aa='1899910' src='//ad.a-ads.com/1899910?size=120x600&background_color=444d56&text_color=cdd2d7&title_color=a2cfff&title_hover_color=449fff&link_color=a2cfff&link_hover_color=449fff' style='position:absolute;top:40px;left:80px;width:120px; height:600px; border:0px; padding:0; overflow:hidden; background-color: transparent;'></iframe>
+    <iframe class="rightad" data-aa='1899911' src='//ad.a-ads.com/1899911?size=120x600&background_color=444d56&text_color=cdd2d7&title_color=a2cfff&title_hover_color=449fff&link_color=a2cfff&link_hover_color=449fff' style='position:absolute;top:40px;right:80px;width:120px; height:600px; border:0px; padding:0; overflow:hidden; background-color: transparent;'></iframe>
+    <script>
+        async function detectAdBlock() {
+            let adBlockEnabled = false;
+            const googleAdUrl = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+            try {
+                await fetch(new Request(googleAdUrl)).catch(_ => adBlockEnabled = true)
+            } catch (e) {
+                adBlockEnabled = true;
+            } finally {
+                if (adBlockEnabled == true) {
+                    document.getElementById('ab').value = 'True';
+                    document.getElementsByClassName('hint')[0].innerHTML = 'Triple your reward by disabling your adblock';
+                    document.getElementsByClassName('amountContainer')[0].getElementsByTagName('p')[1].getElementsByTagName('span')[0].innerHTML = document.getElementsByClassName('amountContainer')[0].getElementsByTagName('p')[1].getElementsByTagName('span')[0].innerHTML.replace('<b> × 3</b>', '');
+                }
+            }
+        }
+        detectAdBlock();
+    </script>
+</body>
+</html>
