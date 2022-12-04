@@ -112,15 +112,16 @@ def index():
         # Check if address is valid
         if claim:
             address = request.form["address"]
-            validPattern = re.compile(
-                "/^ban_[13]{1}[13456789abcdefghijkmnopqrstuwxyz]{59}$/")
-            if not validPattern.match(address):
+
+            if re.match(r"^ban_[13]{1}[13456789abcdefghijkmnopqrstuwxyz]{59}$",
+                        address) is None:
                 claim = False
                 flash("Invalid Address")
             else:
                 try:
                     history = rpc.get_account_history(address)["history"]
-                except:
+                except Exception as e:
+                    print(e)
                     flash(
                         "Sorry, there seems to be a problem with the server. Please try again later."
                     )
@@ -154,30 +155,34 @@ def index():
                 reward *= 3
                 triple = True
             # Send reward
+            reward = round(reward, 4)  # Round to 4dp
             try:
-                account.send(address, float(str(reward)[:6]))
+                account.send(address, reward)
                 # Reset countdown
                 current = time()
-                db[request.form["address"]] = current
+                db[address] = current
                 db[getIP()] = current
                 db["claims"] += 1
-                db["sent"] += float(str(reward)[:6])
-                flash("Success! Sent " + float(str(reward)[:6]) + " $BAN to " +
-                      address)
+                db["sent"] += reward
+                flash("Success! Sent " + str(reward) + " $BAN to " + address)
                 if triple:
                     flash("Your reward has been tripled")
-            except:
+            except Exception as e:
+                print(e)
                 flash(
                     "Sorry, there seems to be a problem with the server. Please try again later."
                 )
 
     messages = {
         'balance':
-        str(db["balance"] / 1e29)[:6],
+        str(round(db["balance"] / 1e29, 2)),
         'reward':
-        str(0.000167 / db["price"] if db["balance"] >= 1e31 else 0.000167 /
-            db["price"] * (0.5 - math.cos(math.pi *
-                                          (db["balance"] / 1e31)) / 2))[:6]
+        str(
+            round(0.000167 /
+                  db["price"], 4) if db["balance"] >= 1e31 else round(
+                      0.000167 / db["price"] *
+                      (0.5 - math.cos(math.pi *
+                                      (db["balance"] / 1e31)) / 2), 4))
     }
     return render_template('index.html', messages=messages)
 
