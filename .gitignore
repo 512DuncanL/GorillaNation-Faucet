@@ -1,0 +1,6 @@
+__pycache__
+.git
+database.db
+.upm
+poetry.lock
+pyproject.toml

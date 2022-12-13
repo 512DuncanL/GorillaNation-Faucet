@@ -1,4 +1,4 @@
-from replit import db
+import pickledb
 from flask import Flask, render_template, request, flash
 from flask_xcaptcha import XCaptcha
 from os import environ
@@ -31,18 +31,21 @@ cg = CoinGeckoAPI()
 
 limiter = Limiter(app,
                   key_func=get_remote_address,
-                  default_limits=["100 per minute"])
+                  default_limits=["120 per minute"])
 
 rpc = bananopie.RPC("https://kaliumapi.appditto.com/api")
 account = bananopie.Wallet(rpc, seed=environ["SEED"], index=0)
+
+db = pickledb.load('database.db', True)
 
 
 def update():
     while True:
         # Update balance, price, and recieve pending deposits
-        db["balance"] = int(account.get_balance()["balance"])
-        db["price"] = cg.get_price(ids='banano',
-                                   vs_currencies='usd')["banano"]["usd"]
+        db.set("balance", int(account.get_balance()["balance"]))
+        db.set(
+            "price",
+            cg.get_price(ids='banano', vs_currencies='usd')["banano"]["usd"])
         try:
             account.receive_all()
         except:
@@ -61,10 +64,10 @@ def getIP():
 
 def clean():
     while True:
-        for key in db.keys():
+        for key in db.getall():
             if key not in ["balance", "price", "sent", "claims"
-                           ] and time() - db[key] > 86400:
-                del db[key]
+                           ] and time() - db.get(key) > 86400:
+                db.rem(key)
         sleep(86400)
 
 
@@ -76,6 +79,8 @@ tClean.start()
 
 @app.route('/', methods=('GET', 'POST'))
 def index():
+    balance = db.get("balance")
+    price = db.get("price")
     if request.method == 'POST':
         claim = True
         # Check if captcha is valid
@@ -84,20 +89,21 @@ def index():
             flash("Invalid Captcha")
 
         # Check if the faucet still has funds
-        if claim and db["balance"] < 5e29:
+        if claim and balance < 5e29:
             claim = False
             flash("Sorry, the faucet is dry")
 
         # Check if user has claimed already
-        if claim and ((request.form["address"] in db.keys()
-                       and time() - db[request.form["address"]] < 86400) or
-                      (getIP() in db.keys() and time() - db[getIP()] < 86400)):
+        if claim and (
+            (request.form["address"] in db.getall()
+             and time() - db.get(request.form["address"]) < 86400) or
+            (getIP() in db.getall() and time() - db.get(getIP()) < 86400)):
             claim = False
             try:
                 m, s = divmod(
-                    86400 - int(time() - db[request.form["address"]]), 60)
+                    86400 - int(time() - db.get(request.form["address"])), 60)
             except:
-                m, s = divmod(86400 - int(time() - db[getIP()]), 60)
+                m, s = divmod(86400 - int(time() - db.get(getIP())), 60)
             h, m = divmod(m, 60)
             h = str(h) + ' hours ' if h > 1 else str(
                 h) + ' hour ' if h == 1 else ''
@@ -148,22 +154,26 @@ def index():
         if claim:
             # Set reward
             triple = False
-            reward = 0.000167 / db["price"] if db[
-                "balance"] >= 1e31 else 0.000167 / db["price"] * (
-                    0.5 - math.cos(math.pi * (db["balance"] / 1e31)) / 2)
+            reward = 0.000167 / price if db.get(
+                "balance") >= 1e31 else 0.000167 / price * (
+                    0.5 - math.cos(math.pi * (balance / 1e31)) / 2)
             if request.form["ab"] == "False":
                 reward *= 3
                 triple = True
             # Send reward
             reward = round(reward, 4)  # Round to 4dp
             try:
-                account.send(address, reward)
+                account.send(address, str(reward))
                 # Reset countdown
                 current = time()
-                db[address] = current
-                db[getIP()] = current
-                db["claims"] += 1
-                db["sent"] += reward
+                db.set(address, current)
+                db.set(getIP(), current)
+                try:
+                    db.set("claims", db.get('claims') + 1)
+                    db.set("sent", db.get('sent') + reward)
+                except:
+                    db.set("claims", 0)
+                    db.set("sent", 0)
                 flash("Success! Sent " + str(reward) + " $BAN to " + address)
                 if triple:
                     flash("Your reward has been tripled")
@@ -175,14 +185,12 @@ def index():
 
     messages = {
         'balance':
-        str(round(db["balance"] / 1e29, 2)),
+        str(round(balance / 1e29, 2)),
         'reward':
         str(
-            round(0.000167 /
-                  db["price"], 4) if db["balance"] >= 1e31 else round(
-                      0.000167 / db["price"] *
-                      (0.5 - math.cos(math.pi *
-                                      (db["balance"] / 1e31)) / 2), 4))
+            round(0.000167 / price, 4) if balance >= 1e31 else round(
+                0.000167 / price * (0.5 - math.cos(math.pi *
+                                                   (balance / 1e31)) / 2), 4))
     }
     return render_template('index.html', messages=messages)
 
