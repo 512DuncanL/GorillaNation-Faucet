@@ -1,0 +1,8 @@
+requests
+Flask
+Flask-Limiter
+bananopie
+pycoingecko
+Flask-xCaptcha
+pickleDB
+waitress
